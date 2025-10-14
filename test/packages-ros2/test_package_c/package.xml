@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>test_package_c</name>
+  <version>3.0.0</version>
+  <description>ROS2 test package C</description>
+  <maintainer email="test@example.com">Test User</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

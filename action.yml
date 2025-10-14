@@ -1,0 +1,69 @@
+name: 'ROS Bloom Release'
+description: 'Build and package ROS packages into Debian packages using bloom'
+author: 'WATonomous'
+
+branding:
+  icon: 'package'
+  color: 'blue'
+
+inputs:
+  ros_distro:
+    description: 'ROS distribution (e.g., noetic, humble, iron, jazzy)'
+    required: true
+  packages_dir:
+    description: 'Directory to search for ROS packages'
+    required: false
+    default: '.'
+  package_whitelist:
+    description: 'Regex pattern to whitelist package names. Default: all packages'
+    required: false
+    default: '.*'
+  package_blacklist:
+    description: 'Regex pattern to blacklist package names. Default: none'
+    required: false
+    default: ''
+  debian_distro:
+    description: 'Debian/Ubuntu distribution'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup ROS environment
+      uses: ros-tooling/setup-ros@v0.7
+      with:
+        required-ros-distributions: ${{ inputs.ros_distro }}
+
+    - name: Install bloom and build dependencies
+      shell: bash
+      run: |
+        echo "Installing bloom and build dependencies..."
+        sudo apt-get update
+        sudo apt-get install -y \
+          python3-bloom \
+          python3-catkin-pkg \
+          python3-colcon-common-extensions \
+          build-essential \
+          debhelper \
+          devscripts \
+          fakeroot \
+          dh-python
+
+    - name: Build Debian packages
+      id: build
+      shell: bash
+      env:
+        ROS_DISTRO: ${{ inputs.ros_distro }}
+        PACKAGES_DIR: ${{ inputs.packages_dir }}
+        PACKAGE_WHITELIST: ${{ inputs.package_whitelist }}
+        PACKAGE_BLACKLIST: ${{ inputs.package_blacklist }}
+        DEBIAN_DISTRO: ${{ inputs.debian_distro }}
+      run: |
+        ${{ github.action_path }}/scripts/build.sh
+
+    - name: Upload Debian packages
+      uses: actions/upload-artifact@v4
+      with:
+        name: bloom-debian-packages-${{ inputs.ros_distro }}
+        path: ./bloom-build/output/*.deb
+        if-no-files-found: error
