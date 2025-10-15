@@ -25,6 +25,11 @@ jobs:
             packages_dir: test/packages-ros1
 
           # ROS2
+          - ros_distro: kilted
+            debian_distro: noble
+            ubuntu_version: '24.04'
+            packages_dir: test/packages-ros2
+
           - ros_distro: jazzy
             debian_distro: noble
             ubuntu_version: '24.04'
