@@ -61,6 +61,7 @@ jobs:
           debian_distro: jammy
           packages_dir: test
           package_whitelist: '^.*/package_[ab]$'
+          artifact_name: bloom-test-whitelist
 
       - name: Verify only package_a and package_b built
         shell: bash
@@ -90,6 +91,7 @@ jobs:
           debian_distro: jammy
           packages_dir: test
           package_blacklist: '.*_test$'
+          artifact_name: bloom-test-blacklist
 
       - name: Verify package_test was excluded
         shell: bash
@@ -118,6 +120,7 @@ jobs:
           packages_dir: test
           package_whitelist: '^.*/package_[abc]$'
           package_blacklist: '^.*/package_c$'
+          artifact_name: bloom-test-whitelist-blacklist
 
       - name: Verify correct filtering
         shell: bash
