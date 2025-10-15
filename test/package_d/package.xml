@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>package_d</name>
+  <version>4.0.0</version>
+  <description>Test package D</description>
+  <maintainer email="test@example.com">Test User</maintainer>
+  <license>BSD</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
