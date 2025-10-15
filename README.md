@@ -2,6 +2,8 @@
 
 A GitHub Action for automatically building and packaging ROS 2 packages into Debian packages using [bloom](https://wiki.ros.org/bloom).
 
+**IMPORTANT** This action does not support End of Life ROS distributions.
+
 ## Features
 
 - Automatically discovers and builds all ROS 2 packages in your repository
