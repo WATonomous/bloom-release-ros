@@ -26,13 +26,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: watonomous/bloom-release-ros@v1
+      - uses: watonomous/bloom-release-ros@v0.1.0
         with:
           ros_distro: 'humble'
           debian_distro: 'jammy'
           packages_dir: '.'  # Optional: directory to search for packages
           package_whitelist: '.*'  # Optional: regex to whitelist packages
           package_blacklist: ''  # Optional: regex to blacklist packages
+          artifact_name: '' # Optional: name of artifacts produced
 ```
 
 Artifacts are automatically uploaded as `bloom-debian-packages-{distro}-{job}-{run_id}` and can be downloaded from the Actions tab.
@@ -60,34 +61,6 @@ package_blacklist: '.*_test$'
 # Combine filters
 package_whitelist: '^myproject_.*'
 package_blacklist: '.*_(test|sim)$'
-```
-
-## Avoiding Artifact Conflicts
-
-When running multiple jobs in parallel with the same ROS distro, use custom artifact names:
-
-```yaml
-jobs:
-  build-all:
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v4
-      - uses: watonomous/bloom-release-ros@v1
-        with:
-          ros_distro: humble
-          debian_distro: jammy
-          artifact_name: bloom-all-packages
-
-  build-filtered:
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v4
-      - uses: watonomous/bloom-release-ros@v1
-        with:
-          ros_distro: humble
-          debian_distro: jammy
-          package_whitelist: '^myproject_.*'
-          artifact_name: bloom-myproject-packages
 ```
 
 ## How It Works
