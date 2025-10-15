@@ -1,0 +1,85 @@
+name: 'ROS 2 Bloom Release'
+description: 'Build and package ROS 2 packages into Debian packages using bloom'
+author: 'WATonomous'
+
+branding:
+  icon: 'package'
+  color: 'blue'
+
+inputs:
+  ros_distro:
+    description: 'ROS 2 distribution (humble, jazzy, kilted, rolling)'
+    required: true
+  packages_dir:
+    description: 'Directory to search for ROS 2 packages'
+    required: false
+    default: '.'
+  package_whitelist:
+    description: 'Regex pattern to whitelist package names. Default: all packages'
+    required: false
+    default: '.*'
+  package_blacklist:
+    description: 'Regex pattern to blacklist package names. Default: none'
+    required: false
+    default: ''
+  debian_distro:
+    description: 'Debian/Ubuntu distribution (jammy, noble)'
+    required: true
+  artifact_name:
+    description: 'Custom artifact name. Default: bloom-debian-packages-{ros_distro}-{job}-{run_id}'
+    required: false
+    default: ''
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup ROS environment
+      uses: ros-tooling/setup-ros@v0.7
+      with:
+        required-ros-distributions: ${{ inputs.ros_distro }}
+
+    - name: Install bloom and build dependencies
+      shell: bash
+      run: |
+        echo "Installing bloom and build dependencies..."
+        sudo apt-get update
+        sudo apt-get install -y \
+          python3-bloom \
+          python3-colcon-common-extensions \
+          build-essential \
+          debhelper \
+          devscripts \
+          fakeroot \
+          dh-python
+
+    - name: Build Debian packages
+      id: build
+      shell: bash
+      env:
+        ROS_DISTRO: ${{ inputs.ros_distro }}
+        PACKAGES_DIR: ${{ inputs.packages_dir }}
+        PACKAGE_WHITELIST: ${{ inputs.package_whitelist }}
+        PACKAGE_BLACKLIST: ${{ inputs.package_blacklist }}
+        DEBIAN_DISTRO: ${{ inputs.debian_distro }}
+      run: |
+        ${{ github.action_path }}/scripts/build.sh
+
+    - name: Set artifact name
+      id: artifact-name
+      shell: bash
+      run: |
+        if [ -n "${{ inputs.artifact_name }}" ]; then
+          echo "name=${{ inputs.artifact_name }}" >> $GITHUB_OUTPUT
+        else
+          DISTRO="${{ inputs.ros_distro }}"
+          JOB="${{ github.job }}"
+          RUN="${{ github.run_id }}"
+          echo "name=bloom-debian-packages-${DISTRO}-${JOB}-${RUN}" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Upload Debian packages
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ steps.artifact-name.outputs.name }}
+        path: ./bloom-build/output/*.deb
+        if-no-files-found: error

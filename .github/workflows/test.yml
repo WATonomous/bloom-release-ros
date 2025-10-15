@@ -1,0 +1,138 @@
+name: Test Action
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  test-all-packages:
+    runs-on: ubuntu-${{ matrix.ubuntu_version }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - ros_distro: rolling
+            debian_distro: noble
+            ubuntu_version: '24.04'
+            packages_dir: test
+
+          - ros_distro: kilted
+            debian_distro: noble
+            ubuntu_version: '24.04'
+            packages_dir: test
+
+          - ros_distro: jazzy
+            debian_distro: noble
+            ubuntu_version: '24.04'
+            packages_dir: test
+
+          - ros_distro: humble
+            debian_distro: jammy
+            ubuntu_version: '22.04'
+            packages_dir: test
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Test ${{ matrix.ros_distro }} - All packages
+        uses: ./
+        with:
+          ros_distro: ${{ matrix.ros_distro }}
+          debian_distro: ${{ matrix.debian_distro }}
+          packages_dir: ${{ matrix.packages_dir }}
+
+  test-whitelist:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Test whitelist - Only package_a and package_b
+        uses: ./
+        with:
+          ros_distro: humble
+          debian_distro: jammy
+          packages_dir: test
+          package_whitelist: '^.*/package_[ab]$'
+          artifact_name: bloom-test-whitelist
+
+      - name: Verify only package_a and package_b built
+        shell: bash
+        run: |
+          echo "Checking generated packages..."
+          ls -la ./bloom-build/output/
+
+          # Should have package_a and package_b
+          test -f ./bloom-build/output/ros-humble-package-a*.deb || (echo "Missing package_a" && exit 1)
+          test -f ./bloom-build/output/ros-humble-package-b*.deb || (echo "Missing package_b" && exit 1)
+
+          # Should NOT have package_c, package_d, or package_test
+          ! ls ./bloom-build/output/ros-humble-package-c*.deb 2>/dev/null && echo "✓ No package_c (correct)"
+          ! ls ./bloom-build/output/ros-humble-package-d*.deb 2>/dev/null && echo "✓ No package_d (correct)"
+          ! ls ./bloom-build/output/ros-humble-package-test*.deb 2>/dev/null && echo "✓ No package_test (correct)"
+
+  test-blacklist:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Test blacklist - Exclude *_test packages
+        uses: ./
+        with:
+          ros_distro: humble
+          debian_distro: jammy
+          packages_dir: test
+          package_blacklist: '.*_test$'
+          artifact_name: bloom-test-blacklist
+
+      - name: Verify package_test was excluded
+        shell: bash
+        run: |
+          echo "Checking generated packages..."
+          ls -la ./bloom-build/output/
+
+          # Should NOT have package_test
+          ! ls ./bloom-build/output/ros-humble-package-test*.deb 2>/dev/null && echo "✓ package_test excluded (correct)"
+
+          # Should have other packages
+          test -f ./bloom-build/output/ros-humble-package-a*.deb || (echo "Missing package_a" && exit 1)
+          test -f ./bloom-build/output/ros-humble-package-c*.deb || (echo "Missing package_c" && exit 1)
+
+  test-whitelist-and-blacklist:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Test combined whitelist and blacklist
+        uses: ./
+        with:
+          ros_distro: humble
+          debian_distro: jammy
+          packages_dir: test
+          package_whitelist: '^.*/package_[abc]$'
+          package_blacklist: '^.*/package_c$'
+          artifact_name: bloom-test-whitelist-blacklist
+
+      - name: Verify correct filtering
+        shell: bash
+        run: |
+          echo "Checking generated packages..."
+          ls -la ./bloom-build/output/
+
+          # Should have package_a and package_b
+          test -f ./bloom-build/output/ros-humble-package-a*.deb || (echo "Missing package_a" && exit 1)
+          test -f ./bloom-build/output/ros-humble-package-b*.deb || (echo "Missing package_b" && exit 1)
+
+          # Should NOT have package_c, package_d, or package_test
+          ! ls ./bloom-build/output/ros-humble-package-c*.deb 2>/dev/null && echo "✓ No package_c (correct)"
+          ! ls ./bloom-build/output/ros-humble-package-d*.deb 2>/dev/null && echo "✓ No package_d (correct)"
+          ! ls ./bloom-build/output/ros-humble-package-test*.deb 2>/dev/null && echo "✓ No package_test (correct)"

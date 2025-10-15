@@ -1,0 +1,18 @@
+# Build artifacts
+*.deb
+*.ddeb
+*.changes
+*.dsc
+*.tar.gz
+*.buildinfo
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
