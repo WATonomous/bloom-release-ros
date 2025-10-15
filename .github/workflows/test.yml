@@ -13,7 +13,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # ROS2 - Currently supported distros only
           - ros_distro: rolling
             debian_distro: noble
             ubuntu_version: '24.04'

@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="3">
-  <name>test_package_c</name>
+  <name>test_package_a</name>
   <version>3.0.0</version>
   <description>ROS2 test package C</description>
   <maintainer email="test@example.com">Test User</maintainer>
