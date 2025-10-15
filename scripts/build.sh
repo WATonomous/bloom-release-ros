@@ -282,6 +282,16 @@ main() {
         exit 1
     fi
 
+    # Source the built workspace for bloom to use
+    log_info "Sourcing built workspace..."
+    if [ "$ROS_VERSION" = "1" ]; then
+        # shellcheck disable=SC1091
+        source "$WORKSPACE/workspace/devel/setup.bash"
+    else
+        # shellcheck disable=SC1091
+        source "$WORKSPACE/workspace/install/setup.bash"
+    fi
+
     # Generate debian packages for each package
     local bloom_success=0
     local bloom_failed=0
