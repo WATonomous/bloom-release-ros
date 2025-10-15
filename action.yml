@@ -71,7 +71,10 @@ runs:
         if [ -n "${{ inputs.artifact_name }}" ]; then
           echo "name=${{ inputs.artifact_name }}" >> $GITHUB_OUTPUT
         else
-          echo "name=bloom-debian-packages-${{ inputs.ros_distro }}-${{ github.job }}-${{ github.run_id }}" >> $GITHUB_OUTPUT
+          DISTRO="${{ inputs.ros_distro }}"
+          JOB="${{ github.job }}"
+          RUN="${{ github.run_id }}"
+          echo "name=bloom-debian-packages-${DISTRO}-${JOB}-${RUN}" >> $GITHUB_OUTPUT
         fi
 
     - name: Upload Debian packages
