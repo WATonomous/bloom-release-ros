@@ -78,40 +78,83 @@ discover_packages() {
 }
 
 # ============================================================================
-# Single Package Build
+# Workspace Build
 # ============================================================================
 
-build_package() {
+build_workspace() {
+    log_section "Building workspace with all packages"
+
+    local workspace_src="$WORKSPACE/workspace/src"
+    mkdir -p "$workspace_src"
+
+    # Copy all packages into workspace
+    log_info "Copying packages into workspace..."
+    for source_dir in "${PACKAGE_PATHS[@]}"; do
+        local pkg_name
+        pkg_name=$(basename "$source_dir")
+        log_info "  - $pkg_name"
+        cp -r "$source_dir" "$workspace_src/$pkg_name"
+    done
+
+    cd "$WORKSPACE/workspace"
+
+    # Install all dependencies
+    log_info "Installing workspace dependencies..."
+    rosdep install --from-paths src --ignore-src -y -r --rosdistro "$ROS_DISTRO" 2>&1 || {
+        log_warn "Some dependencies could not be installed, continuing..."
+    }
+
+    # Build workspace based on ROS version
+    log_info "Building workspace..."
+    if [ "$ROS_VERSION" = "1" ]; then
+        # ROS1: Use catkin
+        # shellcheck disable=SC1090
+        source /opt/ros/"$ROS_DISTRO"/setup.bash
+        if ! catkin_make 2>&1; then
+            log_error "Workspace build failed"
+            return 1
+        fi
+        # shellcheck disable=SC1091
+        source devel/setup.bash
+    else
+        # ROS2: Use colcon
+        # shellcheck disable=SC1090
+        source /opt/ros/"$ROS_DISTRO"/setup.bash
+        if ! colcon build --symlink-install 2>&1; then
+            log_error "Workspace build failed"
+            return 1
+        fi
+        # shellcheck disable=SC1091
+        source install/setup.bash
+    fi
+
+    log_info "Workspace built successfully"
+    return 0
+}
+
+# ============================================================================
+# Single Package Bloom
+# ============================================================================
+
+bloom_package() {
     local source_dir="$1"
     local index="$2"
     local total="$3"
 
-    log_section "Building package $index/$total"
-    log_info "Source: $source_dir"
+    log_section "Generating debian for package $index/$total"
 
-    # Create package-specific workspace (use basename of source dir)
     local pkg_name
     pkg_name=$(basename "$source_dir")
-    local pkg_workspace="$WORKSPACE/packages/$pkg_name"
-    mkdir -p "$pkg_workspace"
+    log_info "Package: $pkg_name"
 
-    # Copy source
-    local repo_dir="$pkg_workspace/source"
-    rm -rf "$repo_dir"
-    mkdir -p "$repo_dir"
-    cp -r "$source_dir"/* "$repo_dir"/
-    cd "$repo_dir"
-
-    # Create bloom workspace
-    local bloom_dir="$pkg_workspace/bloom"
+    # Create bloom workspace for this package
+    local bloom_dir="$WORKSPACE/bloom/$pkg_name"
     mkdir -p "$bloom_dir"
     cd "$bloom_dir"
 
-    local release_repo="$bloom_dir/release"
-    mkdir -p "$release_repo"
-    cd "$release_repo"
+    # Initialize git repo with package source
     git init -q
-    cp -r "$repo_dir"/* .
+    cp -r "$source_dir"/* .
 
     # Generate debian files
     log_info "Generating debian files with bloom..."
@@ -123,14 +166,6 @@ build_package() {
         return 1
     fi
 
-    # Install dependencies
-    log_info "Installing build dependencies..."
-    if [ -f "package.xml" ]; then
-        rosdep install --from-paths . --ignore-src -y -r --rosdistro "$ROS_DISTRO" 2>&1 || {
-            log_warn "Some dependencies could not be installed, continuing..."
-        }
-    fi
-
     # Build debian package
     log_info "Building debian package..."
     if [ ! -d "debian" ]; then
@@ -139,13 +174,13 @@ build_package() {
     fi
 
     if ! fakeroot debian/rules binary 2>&1; then
-        log_error "Build failed"
+        log_error "Debian build failed"
         return 1
     fi
 
     # Collect .deb files
     local deb_files
-    deb_files=$(find "$bloom_dir" -name "*.deb" -type f)
+    deb_files=$(find "$WORKSPACE/bloom" -maxdepth 2 -name "*.deb" -type f)
 
     if [ -z "$deb_files" ]; then
         log_error "No debian packages were generated"
@@ -155,10 +190,10 @@ build_package() {
     log_info "Collecting debian packages..."
     for deb in $deb_files; do
         cp "$deb" "$OUTPUT_DIR/"
-        log_info "Generated: $(basename $deb)"
+        log_info "Generated: $(basename "$deb")"
     done
 
-    log_info "Successfully built package"
+    log_info "Successfully generated debian for $pkg_name"
     return 0
 }
 
@@ -210,31 +245,62 @@ main() {
     # Discover packages
     discover_packages "$SEARCH_DIR" "$PACKAGE_WHITELIST" "$PACKAGE_BLACKLIST"
 
-    log_section "Building ${#PACKAGE_PATHS[@]} package(s)"
+    log_section "Processing ${#PACKAGE_PATHS[@]} package(s)"
 
     # Setup git for bloom
     git config --global user.name "Bloom Release Bot"
     git config --global user.email "bloom@github-actions"
 
-    # Build all packages
-    local build_success=0
-    local build_failed=0
+    # Initialize rosdep
+    log_info "Initializing rosdep..."
+    sudo rosdep init 2>&1 || log_warn "rosdep already initialized"
+
+    log_info "Updating rosdep..."
+    if ! rosdep update 2>&1; then
+        log_error "rosdep update failed"
+        exit 1
+    fi
+
+    log_info "Verifying rosdep sources..."
+    if [ ! -f "/etc/ros/rosdep/sources.list.d/20-default.list" ]; then
+        log_error "rosdep sources not found after initialization"
+        exit 1
+    fi
+
+    # Detect ROS version
+    if [[ "$ROS_DISTRO" =~ ^(melodic|noetic)$ ]]; then
+        ROS_VERSION="1"
+        log_info "Detected ROS 1"
+    else
+        ROS_VERSION="2"
+        log_info "Detected ROS 2"
+    fi
+
+    # Build workspace with all packages together
+    if ! build_workspace; then
+        log_error "Workspace build failed"
+        exit 1
+    fi
+
+    # Generate debian packages for each package
+    local bloom_success=0
+    local bloom_failed=0
 
     for i in "${!PACKAGE_PATHS[@]}"; do
         local source_dir="${PACKAGE_PATHS[$i]}"
 
-        if build_package "$source_dir" "$((i+1))" "${#PACKAGE_PATHS[@]}"; then
-            build_success=$((build_success + 1))
+        if bloom_package "$source_dir" "$((i+1))" "${#PACKAGE_PATHS[@]}"; then
+            bloom_success=$((bloom_success + 1))
         else
-            build_failed=$((build_failed + 1))
+            bloom_failed=$((bloom_failed + 1))
         fi
     done
 
     # Summary
     log_section "Build Summary"
     log_info "Total packages: ${#PACKAGE_PATHS[@]}"
-    log_info "Successful: $build_success"
-    log_info "Failed: $build_failed"
+    log_info "Successful: $bloom_success"
+    log_info "Failed: $bloom_failed"
 
     # Check for output
     local all_deb_files
@@ -246,11 +312,11 @@ main() {
     fi
 
     log_section "Generated Debian Packages"
-    for deb in $(find "$OUTPUT_DIR" -name "*.deb" -type f); do
-        log_info "  - $(basename $deb)"
-    done
+    while IFS= read -r deb; do
+        log_info "  - $(basename "$deb")"
+    done < <(find "$OUTPUT_DIR" -name "*.deb" -type f)
 
-    if [ $build_failed -gt 0 ]; then
+    if [ $bloom_failed -gt 0 ]; then
         log_warn "Some packages failed to build"
         exit 1
     fi
