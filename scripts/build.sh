@@ -104,29 +104,16 @@ build_workspace() {
         log_warn "Some dependencies could not be installed, continuing..."
     }
 
-    # Build workspace based on ROS version
-    log_info "Building workspace..."
-    if [ "$ROS_VERSION" = "1" ]; then
-        # ROS1: Use catkin
-        # shellcheck disable=SC1090
-        source /opt/ros/"$ROS_DISTRO"/setup.bash
-        if ! catkin_make 2>&1; then
-            log_error "Workspace build failed"
-            return 1
-        fi
-        # shellcheck disable=SC1091
-        source devel/setup.bash
-    else
-        # ROS2: Use colcon
-        # shellcheck disable=SC1090
-        source /opt/ros/"$ROS_DISTRO"/setup.bash
-        if ! colcon build --symlink-install 2>&1; then
-            log_error "Workspace build failed"
-            return 1
-        fi
-        # shellcheck disable=SC1091
-        source install/setup.bash
+    # Build workspace with colcon (ROS2)
+    log_info "Building workspace with colcon..."
+    # shellcheck disable=SC1090
+    source /opt/ros/"$ROS_DISTRO"/setup.bash
+    if ! colcon build --symlink-install 2>&1; then
+        log_error "Workspace build failed"
+        return 1
     fi
+    # shellcheck disable=SC1091
+    source install/setup.bash
 
     log_info "Workspace built successfully"
     return 0
@@ -267,15 +254,6 @@ main() {
         exit 1
     fi
 
-    # Detect ROS version
-    if [[ "$ROS_DISTRO" =~ ^(melodic|noetic)$ ]]; then
-        ROS_VERSION="1"
-        log_info "Detected ROS 1"
-    else
-        ROS_VERSION="2"
-        log_info "Detected ROS 2"
-    fi
-
     # Build workspace with all packages together
     if ! build_workspace; then
         log_error "Workspace build failed"
@@ -284,13 +262,8 @@ main() {
 
     # Source the built workspace for bloom to use
     log_info "Sourcing built workspace..."
-    if [ "$ROS_VERSION" = "1" ]; then
-        # shellcheck disable=SC1091
-        source "$WORKSPACE/workspace/devel/setup.bash"
-    else
-        # shellcheck disable=SC1091
-        source "$WORKSPACE/workspace/install/setup.bash"
-    fi
+    # shellcheck disable=SC1091
+    source "$WORKSPACE/workspace/install/setup.bash"
 
     # Generate debian packages for each package
     local bloom_success=0

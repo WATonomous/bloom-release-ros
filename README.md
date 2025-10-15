@@ -1,12 +1,12 @@
 # bloom-release-ros
 
-A GitHub Action for automatically building and packaging ROS packages into Debian packages using [bloom](https://wiki.ros.org/bloom).
+A GitHub Action for automatically building and packaging ROS 2 packages into Debian packages using [bloom](https://wiki.ros.org/bloom).
 
 ## Features
 
-- Automatically discovers and builds all ROS packages in your repository
+- Automatically discovers and builds all ROS 2 packages in your repository
 - Filter packages using whitelist/blacklist regex patterns
-- Supports ROS 1 (Noetic) and ROS 2 (Humble, Iron, Jazzy, etc.)
+- Supports ROS 2 (Humble, Jazzy, Kilted, Rolling)
 - Outputs ready-to-deploy .deb files
 
 ## Quick Start
@@ -20,14 +20,14 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
 
       - uses: watonomous/bloom-release-ros@v1
         with:
-          ros_distro: 'noetic'
-          debian_distro: 'focal'
+          ros_distro: 'humble'
+          debian_distro: 'jammy'
           packages_dir: '.'  # Optional: directory to search for packages
           package_whitelist: '.*'  # Optional: regex to whitelist packages
           package_blacklist: ''  # Optional: regex to blacklist packages
@@ -39,8 +39,8 @@ Artifacts are automatically uploaded as `ros-debian-packages-{distro}` and can b
 
 | Input | Description | Required | Default |
 |-------|-------------|----------|---------|
-| `ros_distro` | ROS distribution (noetic, humble, iron, jazzy) | Yes | - |
-| `debian_distro` | Debian/Ubuntu distribution (focal, jammy, noble) | Yes | - |
+| `ros_distro` | ROS 2 distribution (humble, jazzy, kilted, rolling) | Yes | - |
+| `debian_distro` | Debian/Ubuntu distribution (jammy, noble) | Yes | - |
 | `packages_dir` | Directory to search for ROS packages | No | `.` |
 | `package_whitelist` | Regex to whitelist package names | No | `.*` |
 | `package_blacklist` | Regex to blacklist package names | No | `''` |
@@ -63,8 +63,9 @@ package_blacklist: '.*_(test|sim)$'
 
 1. Searches for all `package.xml` files in `packages_dir`
 2. Filters packages using whitelist/blacklist patterns
-3. For each package: runs bloom-generate, installs dependencies, builds .deb
-4. Collects all .deb files into output directory
+3. Builds all packages together in a workspace using colcon (handles inter-package dependencies)
+4. For each package: runs bloom-generate and builds .deb
+5. Collects all .deb files into output directory
 
 ## Requirements
 

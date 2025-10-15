@@ -1,5 +1,5 @@
-name: 'ROS Bloom Release'
-description: 'Build and package ROS packages into Debian packages using bloom'
+name: 'ROS 2 Bloom Release'
+description: 'Build and package ROS 2 packages into Debian packages using bloom'
 author: 'WATonomous'
 
 branding:
@@ -8,10 +8,10 @@ branding:
 
 inputs:
   ros_distro:
-    description: 'ROS distribution (e.g., noetic, humble, iron, jazzy)'
+    description: 'ROS 2 distribution (humble, jazzy, kilted, rolling)'
     required: true
   packages_dir:
-    description: 'Directory to search for ROS packages'
+    description: 'Directory to search for ROS 2 packages'
     required: false
     default: '.'
   package_whitelist:
@@ -23,7 +23,7 @@ inputs:
     required: false
     default: ''
   debian_distro:
-    description: 'Debian/Ubuntu distribution'
+    description: 'Debian/Ubuntu distribution (jammy, noble)'
     required: true
 
 runs:
@@ -41,7 +41,6 @@ runs:
         sudo apt-get update
         sudo apt-get install -y \
           python3-bloom \
-          python3-catkin-pkg \
           python3-colcon-common-extensions \
           build-essential \
           debhelper \

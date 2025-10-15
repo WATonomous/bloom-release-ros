@@ -13,18 +13,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # ROS1
-          - ros_distro: noetic
-            debian_distro: focal
-            ubuntu_version: '20.04'
-            packages_dir: test/packages-ros1
+          # ROS2 - Currently supported distros only
+          - ros_distro: rolling
+            debian_distro: noble
+            ubuntu_version: '24.04'
+            packages_dir: test/packages-ros2
 
-          - ros_distro: melodic
-            debian_distro: bionic
-            ubuntu_version: '18.04'
-            packages_dir: test/packages-ros1
-
-          # ROS2
           - ros_distro: kilted
             debian_distro: noble
             ubuntu_version: '24.04'
@@ -35,34 +29,9 @@ jobs:
             ubuntu_version: '24.04'
             packages_dir: test/packages-ros2
 
-          - ros_distro: iron
-            debian_distro: jammy
-            ubuntu_version: '22.04'
-            packages_dir: test/packages-ros2
-
           - ros_distro: humble
             debian_distro: jammy
             ubuntu_version: '22.04'
-            packages_dir: test/packages-ros2
-
-          - ros_distro: galactic
-            debian_distro: focal
-            ubuntu_version: '20.04'
-            packages_dir: test/packages-ros2
-
-          - ros_distro: foxy
-            debian_distro: focal
-            ubuntu_version: '20.04'
-            packages_dir: test/packages-ros2
-
-          - ros_distro: eloquent
-            debian_distro: bionic
-            ubuntu_version: '18.04'
-            packages_dir: test/packages-ros2
-
-          - ros_distro: dashing
-            debian_distro: bionic
-            ubuntu_version: '18.04'
             packages_dir: test/packages-ros2
 
     steps:
