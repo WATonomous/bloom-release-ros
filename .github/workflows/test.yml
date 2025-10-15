@@ -43,3 +43,28 @@ jobs:
           ros_distro: ${{ matrix.ros_distro }}
           debian_distro: ${{ matrix.debian_distro }}
           packages_dir: ${{ matrix.packages_dir }}
+
+      - name: Verify git info not in .deb files
+        shell: bash
+        run: |
+          echo "Checking if git config appears in generated .deb files..."
+
+          for deb in ./bloom-build/output/*.deb; do
+            echo "=== Inspecting $(basename "$deb") ==="
+
+            # Extract control file
+            dpkg-deb --info "$deb"
+
+            # Extract and search all files for git config values
+            mkdir -p /tmp/deb-inspect
+            dpkg-deb -x "$deb" /tmp/deb-inspect
+
+            echo "Searching for 'Bloom Release Bot'..."
+            grep -r "Bloom Release Bot" /tmp/deb-inspect || echo "  ✓ Not found"
+
+            echo "Searching for 'bloom@github-actions'..."
+            grep -r "bloom@github-actions" /tmp/deb-inspect || echo "  ✓ Not found"
+
+            rm -rf /tmp/deb-inspect
+            echo ""
+          done
